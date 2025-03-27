@@ -277,21 +277,30 @@
           currentAudio.pause();
           currentAudio.currentTime = 0;
         }
-
+    
         const audio = new Audio(AUDIO_PATH + fileName);
         currentAudio = audio;
-
+    
         audio.onerror = () => {
           console.warn("❌ ملف ناقص:", fileName);
           resolve();
         };
-
+    
         audio.onended = () => {
           currentAudio = null;
           resolve();
         };
-
+    
         audio.play().catch(() => resolve());
+    
+        // ⏱️ نكمل بعد وقت محدد حتى لو ما خلص الصوت (نقصنا من المدة شوي)
+        setTimeout(() => {
+          if (!audio.paused) {
+            audio.pause();
+            audio.currentTime = 0;
+          }
+          resolve();
+        }, 450); // ← بدل 800 أو مدة الصوت كاملة، نخليها أسرع
       });
     }
 

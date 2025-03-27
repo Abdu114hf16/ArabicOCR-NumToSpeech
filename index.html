@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>تحويل رقم عربي إلى صوت</title>
   <style>
     :root {
@@ -12,33 +13,43 @@
       --success: #2ecc71;
     }
 
+    * {
+      box-sizing: border-box;
+    }
+
     body {
+      margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding: 30px;
-      text-align: center;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .container {
-      max-width: 600px;
+      width: 100%;
+      max-width: 480px;
       margin: auto;
       background: var(--card);
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.4);
-      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      padding: 24px;
     }
 
     h2 {
-      margin-bottom: 10px;
+      margin-bottom: 20px;
+      font-size: 22px;
     }
 
     input[type="file"],
     button {
-      margin: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 8px;
+      margin: 10px 5px;
+      padding: 14px 22px;
+      font-size: 18px;
+      border-radius: 10px;
       border: none;
       cursor: pointer;
     }
@@ -46,6 +57,7 @@
     input[type="file"] {
       background-color: #333;
       color: var(--text);
+      width: 100%;
     }
 
     button {
@@ -57,11 +69,6 @@
       background-color: #2980b9;
     }
 
-    #result {
-      font-size: 22px;
-      margin-top: 20px;
-    }
-
     .btn-secondary {
       background-color: var(--success);
     }
@@ -70,9 +77,17 @@
       background-color: #27ae60;
     }
 
+    #result {
+      font-size: 20px;
+      margin-top: 25px;
+      padding: 10px;
+    }
+
     video {
       display: none;
+      width: 100%;
       margin-top: 15px;
+      border-radius: 10px;
     }
   </style>
 </head>
@@ -86,7 +101,10 @@
     <button onclick="document.getElementById('cameraInput').click()">📸 من الكاميرا</button>
     <button onclick="processImage()">تحليل الصورة</button>
 
+    <video id="video" autoplay playsinline></video>
+
     <div id="result">لم يتم تحليل أي صورة بعد.</div>
+
     <button class="btn-secondary" onclick="playNumber()" style="display: none;" id="playBtn">🔊 نطق الرقم</button>
     <button class="btn-secondary" onclick="stopAudio()" style="display: none;" id="stopBtn">⏹️ إيقاف الصوت</button>
   </div>

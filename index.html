@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>تحويل رقم عربي إلى صوت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
       --bg: #121212;
@@ -17,35 +17,32 @@
       font-family: 'Segoe UI', sans-serif;
       background: var(--bg);
       color: var(--text);
-      margin: 0;
       padding: 20px;
-      text-align: center;
+      margin: 0;
     }
 
     .container {
-      max-width: 500px;
+      max-width: 100%;
       margin: auto;
       background: var(--card);
       border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
       padding: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
 
     h2 {
-      font-size: 1.4rem;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
+      font-size: 1.2rem;
     }
 
     input[type="file"],
     button {
       margin: 10px 5px;
-      padding: 12px;
-      font-size: 16px;
+      padding: 12px 16px;
+      font-size: 1rem;
       border-radius: 8px;
       border: none;
       cursor: pointer;
-      width: calc(100% - 20px);
-      box-sizing: border-box;
     }
 
     input[type="file"] {
@@ -62,12 +59,6 @@
       background-color: #2980b9;
     }
 
-    #result {
-      font-size: 20px;
-      margin-top: 15px;
-      min-height: 30px;
-    }
-
     .btn-secondary {
       background-color: var(--success);
     }
@@ -76,15 +67,18 @@
       background-color: #27ae60;
     }
 
-    video {
-      display: none;
-      margin-top: 10px;
-      width: 100%;
+    #result {
+      font-size: 20px;
+      margin-top: 20px;
     }
 
     @media (max-width: 600px) {
-      h2 {
-        font-size: 1.1rem;
+      .container {
+        padding: 15px;
+      }
+      button, input[type="file"] {
+        width: 100%;
+        margin: 8px 0;
       }
     }
   </style>
@@ -92,12 +86,14 @@
 <body>
   <div class="container">
     <h2>📷 ارفع صورة أو التقط صورة تحتوي على رقم عربي</h2>
+
+    <!-- يفتح الكاميرا الخلفية مباشرة على الجوال -->
     <input type="file" id="imageInput" accept="image/*" capture="environment" />
     <button onclick="processImage()">تحليل الصورة</button>
-    <video id="video" autoplay playsinline></video>
+
     <div id="result">لم يتم تحليل أي صورة بعد.</div>
-    <button class="btn-secondary" id="playBtn" onclick="playNumber()" style="display:none;">🔊 نطق الرقم</button>
-    <button class="btn-secondary" id="stopBtn" onclick="stopAudio()" style="display:none;">⏹️ إيقاف الصوت</button>
+    <button class="btn-secondary" onclick="playNumber()" style="display: none;" id="playBtn">🔊 نطق الرقم</button>
+    <button class="btn-secondary" onclick="stopAudio()" style="display: none;" id="stopBtn">⏹️ إيقاف الصوت</button>
   </div>
 
   <script>
@@ -109,16 +105,14 @@
       const input = document.getElementById("imageInput");
       const resultDiv = document.getElementById("result");
       const playBtn = document.getElementById("playBtn");
-      const stopBtn = document.getElementById("stopBtn");
 
       if (!input.files[0]) return alert("❌ الرجاء اختيار صورة.");
-
       resultDiv.innerHTML = "⏳ جارٍ التحليل...";
       playBtn.style.display = "none";
-      stopBtn.style.display = "none";
 
       const originalDataURL = await readFileAsBase64(input.files[0]);
       const thumbnail = await resizeImage(originalDataURL, 800, 800);
+
       let number = await extractNumber(thumbnail);
       if (!number) number = await extractNumber(originalDataURL);
 
@@ -126,7 +120,7 @@
         extractedNumber = parseInt(number);
         resultDiv.innerHTML = `✅ الرقم المستخرج: <strong>${extractedNumber}</strong>`;
         playBtn.style.display = "inline-block";
-        stopBtn.style.display = "inline-block";
+        document.getElementById("stopBtn").style.display = "inline-block";
       } else {
         resultDiv.innerHTML = "❌ تعذر استخراج الرقم من الصورة.";
       }
@@ -134,15 +128,17 @@
 
     async function extractNumber(dataURL) {
       try {
-        const BACKEND_URL = "https://718957f9-200f-4504-8472-8d5d37c8c459-00-2qyv6bww334p9.sisko.replit.dev"; // غيّر الرابط برابط Replit الصحيح
+        const BACKEND_URL = "https://718957f9-200f-4504-8472-8d5d37c8c459-00-2qyv6bww334p9.sisko.replit.dev"; // غيّر هذا بالرابط الخاص بك
         const res = await fetch(`${BACKEND_URL}/process-image`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ image: dataURL.split(',')[1] })
         });
+
         const data = await res.json();
         const text = data.number?.trim() || "";
-        const arabic = "٠١٢٣٤٥٦٧٨٩", english = "0123456789";
+        const arabic = "٠١٢٣٤٥٦٧٨٩";
+        const english = "0123456789";
         let num = text.match(/[٠-٩0-9]+/g)?.join("") || "";
         num = num.split("").map(c => arabic.indexOf(c) > -1 ? english[arabic.indexOf(c)] : c).join("");
         return num || null;
@@ -166,7 +162,8 @@
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement("canvas");
-          let width = img.width, height = img.height;
+          let width = img.width;
+          let height = img.height;
           const scale = Math.min(maxWidth / width, maxHeight / height);
           width *= scale;
           height *= scale;
@@ -181,15 +178,8 @@
     }
 
     async function playNumber() {
-      if (typeof extractedNumber !== "number" || isNaN(extractedNumber)) {
-        alert("❌ لم يتم رصد رقم صالح.");
-        return;
-      }
-      if (extractedNumber < 0 || extractedNumber > 1_000_000) {
-        alert("⚠️ الرقم خارج النطاق المسموح.");
-        return;
-      }
-
+      if (typeof extractedNumber !== "number" || isNaN(extractedNumber)) return;
+      if (extractedNumber < 0 || extractedNumber > 1_000_000) return;
       await numberToSpeech(extractedNumber);
     }
 
@@ -240,7 +230,11 @@
     }
 
     async function twoDigitToSpeech(n) {
-      if (n < 10 || (n >= 11 && n <= 19) || n % 10 === 0) {
+      if (n < 10) {
+        await playSound(n + ".wav");
+      } else if (n >= 11 && n <= 19) {
+        await playSound(n + ".wav");
+      } else if (n % 10 === 0) {
         await playSound(n + ".wav");
       } else {
         await playSound(n % 10 + ".wav");
@@ -251,17 +245,19 @@
 
     function playSound(fileName) {
       return new Promise((resolve) => {
-        if (currentAudio) currentAudio.pause();
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+        }
 
         const audio = new Audio(AUDIO_PATH + fileName);
         currentAudio = audio;
-
-        audio.onerror = () => {
-          console.warn("❌ ملف ناقص:", fileName);
+        audio.onended = () => {
+          currentAudio = null;
           resolve();
         };
-        audio.onended = resolve;
-        audio.play().catch(() => resolve());
+        audio.onerror = resolve;
+        audio.play().catch(resolve);
       });
     }
 
@@ -269,6 +265,7 @@
       if (currentAudio) {
         currentAudio.pause();
         currentAudio.currentTime = 0;
+        currentAudio = null;
       }
     }
   </script>

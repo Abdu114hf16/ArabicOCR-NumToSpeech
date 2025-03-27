@@ -92,6 +92,7 @@
 
   <script>
     const AUDIO_PATH = "audio/";
+    const BACKEND_URL = "https://1d35f811-edb2-489e-9ab0-b42c4300aa31-00-1r5gkybg1yos7.sisko.replit.dev:8000/"; // CHANGE HERE SINCE REPLIT'S LINK IS VARIABLE (FREE PLAN) :)
     let extractedNumber = null;
 
     async function processImage() {
@@ -103,82 +104,28 @@
       resultDiv.innerHTML = "⏳ جارٍ التحليل...";
       playBtn.style.display = "none";
 
-      const originalDataURL = await readFileAsBase64(input.files[0]);
-      const thumbnail = await resizeImage(originalDataURL, 800, 800);
+      const formData = new FormData();
+      formData.append("image", input.files[0]);
 
-      let number = await extractNumber(thumbnail);
-      if (!number) number = await extractNumber(originalDataURL);
-
-      if (number) {
-        extractedNumber = parseInt(number);
-        resultDiv.innerHTML = `✅ الرقم المستخرج: <strong>${extractedNumber}</strong>`;
-        playBtn.style.display = "inline-block";
-      } else {
-        resultDiv.innerHTML = "❌ تعذر استخراج الرقم من الصورة.";
-      }
-    }
-
-    async function extractNumber(dataURL) {
       try {
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        const response = await fetch(`${BACKEND_URL}process-image`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer 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"
-          },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            messages: [{
-              role: "user",
-              content: [
-                { type: "text", text: "استخرج الرقم فقط بدون أي نص إضافي." },
-                { type: "image_url", image_url: { url: dataURL } }
-              ]
-            }],
-            max_tokens: 50
-          })
+          body: formData,
         });
 
-        const data = await res.json();
-        const text = data.choices?.[0]?.message?.content?.trim() || "";
-        const arabic = "٠١٢٣٤٥٦٧٨٩";
-        const english = "0123456789";
-        let num = text.match(/[٠-٩0-9]+/g)?.join("") || "";
-        num = num.split("").map(c => arabic.indexOf(c) > -1 ? english[arabic.indexOf(c)] : c).join("");
-        return num || null;
-      } catch (e) {
-        console.error("❌", e);
-        return null;
+        const data = await response.json();
+
+        if (response.ok && data.number !== undefined) {
+          extractedNumber = parseInt(data.number);
+          resultDiv.innerHTML = `✅ الرقم المستخرج: <strong>${extractedNumber}</strong>`;
+          playBtn.style.display = "inline-block";
+        } else {
+          resultDiv.innerHTML = "❌ لم يتم العثور على رقم.";
+        }
+      } catch (error) {
+        console.error(error);
+        resultDiv.innerHTML = "❌ حدث خطأ أثناء الاتصال بالخادم.";
       }
-    }
-
-    function readFileAsBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
-
-    function resizeImage(dataURL, maxWidth, maxHeight) {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          let width = img.width;
-          let height = img.height;
-          const scale = Math.min(maxWidth / width, maxHeight / height);
-          width *= scale;
-          height *= scale;
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/jpeg", 0.8));
-        };
-        img.src = dataURL;
-      });
     }
 
     function openCamera() {

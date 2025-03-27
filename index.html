@@ -108,7 +108,7 @@
       formData.append("image", input.files[0]);
 
       try {
-        const response = await fetch(`${BACKEND_URL}process-image`, {
+        const response = await fetch(`${BACKEND_URL}/process-image`, {
           method: "POST",
           body: formData,
         });

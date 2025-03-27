@@ -282,16 +282,19 @@
     }
 
     function playSound(fileName) {
-      return new Promise((resolve) => {
-        const audio = new Audio(AUDIO_PATH + fileName);
-        audio.onerror = () => {
-          console.warn("❌ ملف ناقص:", fileName);
-          resolve();
-        };
-        audio.onended = resolve;
-        audio.play().catch(() => resolve());
-      });
-    }
+        return new Promise((resolve) => {
+    const audio = new Audio(AUDIO_PATH + fileName);
+    audio.onerror = () => {
+      console.warn("❌ ملف ناقص:", fileName);
+      resolve();
+    };
+    audio.onended = () => {
+      setTimeout(resolve, 100); // ⏱️ تأخير 100ms فقط بين الأصوات
+    };
+    audio.play().catch(() => resolve());
+  });
+}
+
   </script>
 </body>
 </html>

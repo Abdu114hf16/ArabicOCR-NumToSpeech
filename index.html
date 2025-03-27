@@ -279,7 +279,7 @@
           resolve();
         };
         audio.onended = () => {
-          setTimeout(resolve, 70); // ⏱️ تأخير 100ms فقط بين الأصوات
+          setTimeout(resolve, 50); // ⏱️ تأخير 100ms فقط بين الأصوات
         };
         audio.play().catch(() => resolve());
       });

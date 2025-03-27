@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>تحويل رقم عربي إلى صوت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
       --bg: #121212;
@@ -13,51 +13,44 @@
       --success: #2ecc71;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
     body {
-      margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      margin: 0;
+      padding: 15px;
+      text-align: center;
     }
 
     .container {
-      width: 100%;
-      max-width: 480px;
-      margin: auto;
+      max-width: 100%;
       background: var(--card);
-      border-radius: 16px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
-      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      padding: 20px;
     }
 
     h2 {
-      margin-bottom: 20px;
-      font-size: 22px;
+      margin-bottom: 10px;
     }
 
     input[type="file"],
+    input[type="number"],
     button {
-      margin: 10px 5px;
-      padding: 14px 22px;
+      margin: 10px;
+      padding: 12px 20px;
       font-size: 18px;
-      border-radius: 10px;
+      border-radius: 8px;
       border: none;
-      cursor: pointer;
+      width: 90%;
+      max-width: 300px;
+      box-sizing: border-box;
     }
 
-    input[type="file"] {
+    input[type="file"],
+    input[type="number"] {
       background-color: #333;
       color: var(--text);
-      width: 100%;
     }
 
     button {
@@ -69,6 +62,11 @@
       background-color: #2980b9;
     }
 
+    #result {
+      font-size: 20px;
+      margin-top: 20px;
+    }
+
     .btn-secondary {
       background-color: var(--success);
     }
@@ -77,15 +75,10 @@
       background-color: #27ae60;
     }
 
-    #result {
-      font-size: 20px;
-      margin-top: 25px;
-      padding: 10px;
-    }
-
     video {
       display: none;
       width: 100%;
+      height: auto;
       margin-top: 15px;
       border-radius: 10px;
     }
@@ -93,20 +86,23 @@
 </head>
 <body>
   <div class="container">
-    <h2>📷 ارفع صورة أو التقط صورة تحتوي على رقم عربي</h2>
+    <h2>تحويل رقم عربي إلى صوت</h2>
 
+    <h3>أدخل الرقم يدويًا:</h3>
+    <input type="number" id="manualInput" placeholder="مثال: 1234" />
+    <button onclick="handleManualInput()">🔊 نطق الرقم</button>
+
+    <hr style="margin: 20px 0; border-color: #555;" />
+
+    <h3>أو ارفع صورة أو التقط صورة</h3>
     <input type="file" id="imageInput" accept="image/*" />
-    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;" />
-
-    <button onclick="document.getElementById('cameraInput').click()">📸 من الكاميرا</button>
+    <button onclick="openCamera()">📸 من الكاميرا</button>
     <button onclick="processImage()">تحليل الصورة</button>
 
     <video id="video" autoplay playsinline></video>
 
     <div id="result">لم يتم تحليل أي صورة بعد.</div>
-
     <button class="btn-secondary" onclick="playNumber()" style="display: none;" id="playBtn">🔊 نطق الرقم</button>
-    <button class="btn-secondary" onclick="stopAudio()" style="display: none;" id="stopBtn">⏹️ إيقاف الصوت</button>
   </div>
 
   <script>
@@ -114,26 +110,16 @@
     let extractedNumber = null;
     let currentAudio = null;
 
-    const BACKEND_URL = "https://718957f9-200f-4504-8472-8d5d37c8c459-00-2qyv6bww334p9.sisko.replit.dev";
-
-    document.getElementById("cameraInput").addEventListener("change", async function () {
-      if (!this.files[0]) return;
-      await handleImageFile(this.files[0]);
-    });
-
     async function processImage() {
       const input = document.getElementById("imageInput");
-      if (!input.files[0]) return alert("❌ الرجاء اختيار صورة.");
-      await handleImageFile(input.files[0]);
-    }
-
-    async function handleImageFile(file) {
       const resultDiv = document.getElementById("result");
       const playBtn = document.getElementById("playBtn");
+
+      if (!input.files[0]) return alert("❌ الرجاء اختيار صورة.");
       resultDiv.innerHTML = "⏳ جارٍ التحليل...";
       playBtn.style.display = "none";
 
-      const originalDataURL = await readFileAsBase64(file);
+      const originalDataURL = await readFileAsBase64(input.files[0]);
       const thumbnail = await resizeImage(originalDataURL, 800, 800);
 
       let number = await extractNumber(thumbnail);
@@ -143,7 +129,6 @@
         extractedNumber = parseInt(number);
         resultDiv.innerHTML = `✅ الرقم المستخرج: <strong>${extractedNumber}</strong>`;
         playBtn.style.display = "inline-block";
-        document.getElementById("stopBtn").style.display = "inline-block";
       } else {
         resultDiv.innerHTML = "❌ تعذر استخراج الرقم من الصورة.";
       }
@@ -151,6 +136,7 @@
 
     async function extractNumber(dataURL) {
       try {
+        const BACKEND_URL = "https://718957f9-200f-4504-8472-8d5d37c8c459-00-2qyv6bww334p9.sisko.replit.dev";
         const res = await fetch(`${BACKEND_URL}/process-image`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -199,20 +185,51 @@
       });
     }
 
+    function openCamera() {
+      const input = document.getElementById("imageInput");
+      const captureInput = document.createElement("input");
+      captureInput.type = "file";
+      captureInput.accept = "image/*";
+      captureInput.capture = "environment"; // يفتح الكاميرا الخلفية
+
+      captureInput.onchange = () => {
+        if (captureInput.files.length > 0) {
+          input.files = captureInput.files;
+        }
+      };
+
+      captureInput.click();
+    }
+
+    function handleManualInput() {
+      const input = document.getElementById("manualInput").value;
+      const number = parseInt(input);
+
+      if (isNaN(number)) {
+        alert("❌ الرجاء إدخال رقم صالح.");
+        return;
+      }
+      if (number < 0 || number > 1000000) {
+        alert("⚠️ الرقم خارج النطاق المسموح.");
+        return;
+      }
+
+      extractedNumber = number;
+      document.getElementById("playBtn").style.display = "inline-block";
+      numberToSpeech(number);
+    }
+
     async function playNumber() {
       if (typeof extractedNumber !== "number" || isNaN(extractedNumber)) {
         alert("❌ لم يتم رصد رقم صالح.");
         return;
       }
-      if (extractedNumber < 0 || extractedNumber > 1_000_000) {
-        alert("⚠️ الرقم خارج النطاق المسموح.");
-        return;
-      }
+
       await numberToSpeech(extractedNumber);
     }
 
     async function numberToSpeech(number) {
-      if (number === 1_000_000) {
+      if (number === 1000000) {
         await playSound("Million.wav");
       } else {
         await thousandToSpeech(number);
@@ -279,19 +296,10 @@
           resolve();
         };
         audio.onended = () => {
-          setTimeout(resolve, 50); // ⏱️ تأخير 100ms فقط بين الأصوات
+          setTimeout(resolve, 25); // ⏱️ تأخير 100ms فقط بين الأصوات
         };
         audio.play().catch(() => resolve());
       });
-    }
-
-
-    function stopAudio() {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
-        currentAudio = null;
-      }
     }
   </script>
 </body>

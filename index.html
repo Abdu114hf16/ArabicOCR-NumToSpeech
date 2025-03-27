@@ -308,16 +308,20 @@
     function playSound(fileName) {
       return new Promise((resolve) => {
         const audio = new Audio(AUDIO_PATH + fileName);
+    
         audio.onerror = () => {
           console.warn("❌ ملف ناقص:", fileName);
           resolve();
         };
     
-        audio.play()
-          .then(() => setTimeout(resolve, 200)) // تأخير يدوي بعد تشغيل الصوت
-          .catch(() => resolve());
+        audio.onended = () => {
+          setTimeout(resolve, 100); // تأخير بسيط بعد انتهاء الصوت
+        };
+    
+        audio.play().catch(() => resolve());
       });
     }
+
 
 
   </script>

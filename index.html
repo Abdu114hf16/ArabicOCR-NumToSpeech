@@ -2,7 +2,6 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>تحويل رقم عربي إلى صوت</title>
   <style>
     :root {
@@ -13,43 +12,35 @@
       --success: #2ecc71;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       font-family: 'Segoe UI', sans-serif;
       background: var(--bg);
       color: var(--text);
-      margin: 0;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: var(--card);
-      border-radius: 16px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-      padding: 25px;
+      padding: 30px;
       text-align: center;
     }
 
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      padding: 30px;
+    }
+
     h2 {
-      margin-bottom: 15px;
-      font-size: 22px;
+      margin-bottom: 10px;
     }
 
     input[type="file"],
     button {
-      width: 100%;
-      margin: 8px 0;
-      padding: 12px;
+      margin: 10px;
+      padding: 10px 20px;
       font-size: 16px;
-      border-radius: 10px;
+      border-radius: 8px;
       border: none;
       cursor: pointer;
-      transition: 0.3s ease;
     }
 
     input[type="file"] {
@@ -66,6 +57,11 @@
       background-color: #2980b9;
     }
 
+    #result {
+      font-size: 22px;
+      margin-top: 20px;
+    }
+
     .btn-secondary {
       background-color: var(--success);
     }
@@ -74,34 +70,9 @@
       background-color: #27ae60;
     }
 
-    #result {
-      font-size: 20px;
-      margin-top: 18px;
-      min-height: 28px;
-    }
-
     video {
       display: none;
       margin-top: 15px;
-      width: 100%;
-      border-radius: 10px;
-    }
-
-    @media (max-width: 480px) {
-      h2 {
-        font-size: 20px;
-      }
-
-      .container {
-        padding: 18px;
-        border-radius: 12px;
-      }
-
-      input[type="file"],
-      button {
-        font-size: 15px;
-        padding: 10px;
-      }
     }
   </style>
 </head>
@@ -113,49 +84,17 @@
     <button onclick="openCamera()">📸 من الكاميرا</button>
     <button onclick="processImage()">تحليل الصورة</button>
 
-    <video id="video" autoplay playsinline></video>
+    <video id="video" width="300" autoplay playsinline></video>
 
     <div id="result">لم يتم تحليل أي صورة بعد.</div>
     <button class="btn-secondary" onclick="playNumber()" style="display: none;" id="playBtn">🔊 نطق الرقم</button>
+    <button class="btn-secondary" onclick="stopAudio()" style="display: none;" id="stopBtn">⏹️ إيقاف الصوت</button>
   </div>
 
   <script>
     const AUDIO_PATH = "audio/";
     let extractedNumber = null;
-
-    function openCamera() {
-      const video = document.getElementById("video");
-      const input = document.getElementById("imageInput");
-      input.value = null;
-
-      navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { exact: "environment" }
-        }
-      })
-      .then(stream => {
-        video.srcObject = stream;
-        video.style.display = "block";
-
-        setTimeout(() => {
-          const canvas = document.createElement("canvas");
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          video.srcObject.getTracks().forEach(track => track.stop());
-          video.style.display = "none";
-
-          canvas.toBlob(blob => {
-            const file = new File([blob], "captured.jpg", { type: "image/jpeg" });
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            input.files = dt.files;
-          }, "image/jpeg", 0.9);
-        }, 1500);
-      })
-      .catch(() => alert("⚠️ لا يمكن الوصول إلى الكاميرا الخلفية."));
-    }
+    let currentAudio = null;
 
     async function processImage() {
       const input = document.getElementById("imageInput");
@@ -183,7 +122,7 @@
 
     async function extractNumber(dataURL) {
       try {
-        const BACKEND_URL = "https://718957f9-200f-4504-8472-8d5d37c8c459-00-2qyv6bww334p9.sisko.replit.dev"; // عدل هنا
+        const BACKEND_URL = "https://718957f9-200f-4504-8472-8d5d37c8c459-00-2qyv6bww334p9.sisko.replit.dev";
         const res = await fetch(`${BACKEND_URL}/process-image`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -232,6 +171,36 @@
       });
     }
 
+    function openCamera() {
+      const video = document.getElementById("video");
+      const input = document.getElementById("imageInput");
+      input.value = null;
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
+        .then(stream => {
+          video.srcObject = stream;
+          video.style.display = "block";
+
+          setTimeout(() => {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            video.srcObject.getTracks().forEach(track => track.stop());
+            video.style.display = "none";
+
+            canvas.toBlob(blob => {
+              const file = new File([blob], "captured.jpg", { type: "image/jpeg" });
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              input.files = dt.files;
+            }, "image/jpeg", 0.9);
+          }, 1500);
+        })
+        .catch(() => alert("⚠️ لا يمكن الوصول إلى الكاميرا."));
+    }
+
     async function playNumber() {
       if (typeof extractedNumber !== "number" || isNaN(extractedNumber)) {
         alert("❌ لم يتم رصد رقم صالح.");
@@ -242,6 +211,7 @@
         return;
       }
 
+      document.getElementById("stopBtn").style.display = "inline-block";
       await numberToSpeech(extractedNumber);
     }
 
@@ -307,23 +277,35 @@
 
     function playSound(fileName) {
       return new Promise((resolve) => {
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+        }
+
         const audio = new Audio(AUDIO_PATH + fileName);
-    
+        currentAudio = audio;
+
         audio.onerror = () => {
           console.warn("❌ ملف ناقص:", fileName);
           resolve();
         };
-    
+
         audio.onended = () => {
-          setTimeout(resolve, 200); // تأخير بسيط بعد انتهاء الصوت
+          currentAudio = null;
+          resolve();
         };
-    
+
         audio.play().catch(() => resolve());
       });
     }
 
-
-
+    function stopAudio() {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
+      }
+    }
   </script>
 </body>
 </html>

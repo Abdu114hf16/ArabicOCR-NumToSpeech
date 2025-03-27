@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>تحويل رقم عربي إلى صوت</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --card: #1f1f1f;
+      --text: #ffffff;
+      --accent: #3498db;
+      --success: #2ecc71;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 30px;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      padding: 30px;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    input[type="file"],
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+
+    input[type="file"] {
+      background-color: #333;
+      color: var(--text);
+    }
+
+    button {
+      background-color: var(--accent);
+      color: white;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    #result {
+      font-size: 22px;
+      margin-top: 20px;
+    }
+
+    .btn-secondary {
+      background-color: var(--success);
+    }
+
+    .btn-secondary:hover {
+      background-color: #27ae60;
+    }
+
+    video {
+      display: none;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📷 ارفع صورة أو التقط صورة تحتوي على رقم عربي</h2>
+
+    <input type="file" id="imageInput" accept="image/*" />
+    <button onclick="openCamera()">📸 من الكاميرا</button>
+    <button onclick="processImage()">تحليل الصورة</button>
+
+    <video id="video" width="300" autoplay playsinline></video>
+
+    <div id="result">لم يتم تحليل أي صورة بعد.</div>
+    <button class="btn-secondary" onclick="playNumber()" style="display: none;" id="playBtn">🔊 نطق الرقم</button>
+  </div>
+
+  <script>
+    const AUDIO_PATH = "audio/";
+    let extractedNumber = null;
+
+    async function processImage() {
+      const input = document.getElementById("imageInput");
+      const resultDiv = document.getElementById("result");
+      const playBtn = document.getElementById("playBtn");
+
+      if (!input.files[0]) return alert("❌ الرجاء اختيار صورة.");
+      resultDiv.innerHTML = "⏳ جارٍ التحليل...";
+      playBtn.style.display = "none";
+
+      const originalDataURL = await readFileAsBase64(input.files[0]);
+      const thumbnail = await resizeImage(originalDataURL, 800, 800);
+
+      let number = await extractNumber(thumbnail);
+      if (!number) number = await extractNumber(originalDataURL);
+
+      if (number) {
+        extractedNumber = parseInt(number);
+        resultDiv.innerHTML = `✅ الرقم المستخرج: <strong>${extractedNumber}</strong>`;
+        playBtn.style.display = "inline-block";
+      } else {
+        resultDiv.innerHTML = "❌ تعذر استخراج الرقم من الصورة.";
+      }
+    }
+
+    async function extractNumber(dataURL) {
+      try {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer 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"
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: [{
+              role: "user",
+              content: [
+                { type: "text", text: "استخرج الرقم فقط بدون أي نص إضافي." },
+                { type: "image_url", image_url: { url: dataURL } }
+              ]
+            }],
+            max_tokens: 50
+          })
+        });
+
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content?.trim() || "";
+        const arabic = "٠١٢٣٤٥٦٧٨٩";
+        const english = "0123456789";
+        let num = text.match(/[٠-٩0-9]+/g)?.join("") || "";
+        num = num.split("").map(c => arabic.indexOf(c) > -1 ? english[arabic.indexOf(c)] : c).join("");
+        return num || null;
+      } catch (e) {
+        console.error("❌", e);
+        return null;
+      }
+    }
+
+    function readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function resizeImage(dataURL, maxWidth, maxHeight) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const scale = Math.min(maxWidth / width, maxHeight / height);
+          width *= scale;
+          height *= scale;
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.8));
+        };
+        img.src = dataURL;
+      });
+    }
+
+    function openCamera() {
+      const video = document.getElementById("video");
+      const input = document.getElementById("imageInput");
+      input.value = null;
+
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          video.srcObject = stream;
+          video.style.display = "block";
+
+          setTimeout(() => {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            video.srcObject.getTracks().forEach(track => track.stop());
+            video.style.display = "none";
+
+            canvas.toBlob(blob => {
+              const file = new File([blob], "captured.jpg", { type: "image/jpeg" });
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              input.files = dt.files;
+            }, "image/jpeg", 0.9);
+          }, 2000);
+        })
+        .catch(() => alert("⚠️ لا يمكن الوصول إلى الكاميرا."));
+    }
+
+    async function playNumber() {
+      if (typeof extractedNumber !== "number" || isNaN(extractedNumber)) {
+        alert("❌ لم يتم رصد رقم صالح.");
+        return;
+      }
+      if (extractedNumber < 0 || extractedNumber > 1_000_000) {
+        alert("⚠️ الرقم خارج النطاق المسموح.");
+        return;
+      }
+
+      await numberToSpeech(extractedNumber);
+    }
+
+    async function numberToSpeech(number) {
+      if (number === 1_000_000) {
+        await playSound("Million.wav");
+      } else {
+        await thousandToSpeech(number);
+      }
+    }
+
+    async function thousandToSpeech(n) {
+      if (n < 1000) {
+        await threeDigitToSpeech(n);
+      } else {
+        const thousands = Math.floor(n / 1000);
+        const remainder = n % 1000;
+
+        if (thousands === 1) {
+          await playSound("Thousand.wav");
+        } else if (thousands === 2) {
+          await playSound("2000.wav");
+        } else if (thousands < 11) {
+          await threeDigitToSpeech(thousands);
+          await playSound("Thousands.wav");
+        } else {
+          await threeDigitToSpeech(thousands);
+          await playSound("Thousand.wav");
+        }
+
+        if (remainder > 0) {
+          await playSound("And.wav");
+          await threeDigitToSpeech(remainder);
+        }
+      }
+    }
+
+    async function threeDigitToSpeech(n) {
+      if (n < 100) {
+        await twoDigitToSpeech(n);
+      } else if (n % 100 === 0) {
+        await playSound(n + ".wav");
+      } else {
+        await playSound(Math.floor(n / 100) * 100 + ".wav");
+        await playSound("And.wav");
+        await twoDigitToSpeech(n % 100);
+      }
+    }
+
+    async function twoDigitToSpeech(n) {
+      if (n < 10) {
+        await playSound(n + ".wav");
+      } else if (n >= 11 && n <= 19) {
+        await playSound(n + ".wav");
+      } else if (n % 10 === 0) {
+        await playSound(n + ".wav");
+      } else {
+        await playSound(n % 10 + ".wav");
+        await playSound("And.wav");
+        await playSound(Math.floor(n / 10) * 10 + ".wav");
+      }
+    }
+
+    function playSound(fileName) {
+      return new Promise((resolve) => {
+        const audio = new Audio(AUDIO_PATH + fileName);
+        audio.onerror = () => {
+          console.warn("❌ ملف ناقص:", fileName);
+          resolve();
+        };
+        audio.onended = resolve;
+        audio.play().catch(() => resolve());
+      });
+    }
+  </script>
+</body>
+</html>

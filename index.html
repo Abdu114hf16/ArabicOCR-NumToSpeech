@@ -31,7 +31,14 @@
     }
 
     h2 {
-      margin-bottom: 10px;
+      margin-bottom: 5px;
+    }
+
+    .note {
+      font-size: 14px;
+      color: #ccc;
+      margin-top: 0;
+      margin-bottom: 20px;
     }
 
     input[type="file"],
@@ -87,10 +94,11 @@
 <body>
   <div class="container">
     <h2>تحويل رقم عربي إلى صوت</h2>
+    <p class="note">🔢 يدعم الأرقام من 0 إلى 1,000,000</p>
 
     <h3>أدخل الرقم يدويًا:</h3>
     <input type="number" id="manualInput" placeholder="مثال: 1234" />
-    <button onclick="handleManualInput()">🔊 نطق الرقم</button>
+    <button onclick="handleManualInput()">🔊 نطق الرقم اليدوي</button>
 
     <hr style="margin: 20px 0; border-color: #555;" />
 
@@ -102,13 +110,23 @@
     <video id="video" autoplay playsinline></video>
 
     <div id="result">لم يتم تحليل أي صورة بعد.</div>
-    <button class="btn-secondary" onclick="playNumber()" style="display: none;" id="playBtn">🔊 نطق الرقم</button>
+    <button class="btn-secondary" onclick="playExtracted()" style="display: none;" id="playBtn">🔊 نطق الرقم المستخرج</button>
   </div>
 
   <script>
     const AUDIO_PATH = "audio/";
     let extractedNumber = null;
     let currentAudio = null;
+
+    function handleManualInput() {
+      const input = document.getElementById("manualInput").value;
+      const number = parseInt(input);
+
+      if (isNaN(number)) return alert("❌ الرجاء إدخال رقم صحيح.");
+      if (number < 0 || number > 1000000) return alert("⚠️ الرقم خارج النطاق المسموح.");
+
+      numberToSpeech(number);
+    }
 
     async function processImage() {
       const input = document.getElementById("imageInput");
@@ -190,7 +208,7 @@
       const captureInput = document.createElement("input");
       captureInput.type = "file";
       captureInput.accept = "image/*";
-      captureInput.capture = "environment"; // يفتح الكاميرا الخلفية
+      captureInput.capture = "environment";
 
       captureInput.onchange = () => {
         if (captureInput.files.length > 0) {
@@ -201,27 +219,13 @@
       captureInput.click();
     }
 
-    function handleManualInput() {
-      const input = document.getElementById("manualInput").value;
-      const number = parseInt(input);
-
-      if (isNaN(number)) {
-        alert("❌ الرجاء إدخال رقم صالح.");
-        return;
-      }
-      if (number < 0 || number > 1000000) {
-        alert("⚠️ الرقم خارج النطاق المسموح.");
-        return;
-      }
-
-      extractedNumber = number;
-      document.getElementById("playBtn").style.display = "inline-block";
-      numberToSpeech(number);
-    }
-
-    async function playNumber() {
+    async function playExtracted() {
       if (typeof extractedNumber !== "number" || isNaN(extractedNumber)) {
         alert("❌ لم يتم رصد رقم صالح.");
+        return;
+      }
+      if (extractedNumber < 0 || extractedNumber > 1000000) {
+        alert("⚠️ الرقم خارج النطاق.");
         return;
       }
 
@@ -290,14 +294,24 @@
 
     function playSound(fileName) {
       return new Promise((resolve) => {
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+        }
+
         const audio = new Audio(AUDIO_PATH + fileName);
+        currentAudio = audio;
+
         audio.onerror = () => {
           console.warn("❌ ملف ناقص:", fileName);
           resolve();
         };
+
         audio.onended = () => {
-          setTimeout(resolve, 25); // ⏱️ تأخير 100ms فقط بين الأصوات
+          currentAudio = null;
+          setTimeout(resolve, 20);
         };
+
         audio.play().catch(() => resolve());
       });
     }

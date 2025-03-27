@@ -314,7 +314,7 @@
         };
     
         audio.play()
-          .then(() => setTimeout(resolve, 50)) // تأخير يدوي بعد تشغيل الصوت
+          .then(() => setTimeout(resolve, 100)) // تأخير يدوي بعد تشغيل الصوت
           .catch(() => resolve());
       });
     }

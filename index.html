@@ -92,7 +92,6 @@
 
   <script>
     const AUDIO_PATH = "audio/";
-    const BACKEND_URL = "https://1d35f811-edb2-489e-9ab0-b42c4300aa31-00-1r5gkybg1yos7.sisko.replit.dev:8000/process-image";  // ← غيّر الرابط لاحقاً بعد تشغيل Replit
     let extractedNumber = null;
 
     async function processImage() {
@@ -105,32 +104,46 @@
       playBtn.style.display = "none";
 
       const originalDataURL = await readFileAsBase64(input.files[0]);
-      const base64 = originalDataURL.split(',')[1];
+      const thumbnail = await resizeImage(originalDataURL, 800, 800);
 
+      let number = await extractNumber(thumbnail);
+      if (!number) number = await extractNumber(originalDataURL);
+
+      if (number) {
+        extractedNumber = parseInt(number);
+        resultDiv.innerHTML = `✅ الرقم المستخرج: <strong>${extractedNumber}</strong>`;
+        playBtn.style.display = "inline-block";
+      } else {
+        resultDiv.innerHTML = "❌ تعذر استخراج الرقم من الصورة.";
+      }
+    }
+
+    async function extractNumber(dataURL) {
       try {
-        const res = await fetch(BACKEND_URL, {
+        const BACKEND_URL = "https://718957f9-200f-4504-8472-8d5d37c8c459-00-2qyv6bww334p9.sisko.replit.dev/"; // رابط السيرفر بدون /
+        
+        const res = await fetch(`${BACKEND_URL}/process-image`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64 })
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            image: dataURL.split(',')[1] // إرسال فقط الجزء base64 من الصورة
+          })
         });
 
         const data = await res.json();
-        const text = data.number || "";
+        const text = data.number?.trim() || "";
+        
         const arabic = "٠١٢٣٤٥٦٧٨٩";
         const english = "0123456789";
-
         let num = text.match(/[٠-٩0-9]+/g)?.join("") || "";
         num = num.split("").map(c => arabic.indexOf(c) > -1 ? english[arabic.indexOf(c)] : c).join("");
-        extractedNumber = parseInt(num);
 
-        if (isNaN(extractedNumber)) throw new Error("رقم غير صالح");
-
-        resultDiv.innerHTML = `✅ الرقم المستخرج: <strong>${extractedNumber}</strong>`;
-        playBtn.style.display = "inline-block";
-
+        return num || null;
       } catch (e) {
-        console.error(e);
-        resultDiv.innerHTML = "❌ حدث خطأ أثناء الاتصال بالخادم.";
+        console.error("❌", e);
+        return null;
       }
     }
 
@@ -140,6 +153,26 @@
         reader.onload = () => resolve(reader.result);
         reader.onerror = reject;
         reader.readAsDataURL(file);
+      });
+    }
+
+    function resizeImage(dataURL, maxWidth, maxHeight) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const scale = Math.min(maxWidth / width, maxHeight / height);
+          width *= scale;
+          height *= scale;
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.8));
+        };
+        img.src = dataURL;
       });
     }
 
@@ -173,8 +206,89 @@
         .catch(() => alert("⚠️ لا يمكن الوصول إلى الكاميرا."));
     }
 
-    function playNumber() {
-      alert("🔜 سيتم تفعيل النطق قريبًا! الرقم المستخرج هو: " + extractedNumber);
+    async function playNumber() {
+      if (typeof extractedNumber !== "number" || isNaN(extractedNumber)) {
+        alert("❌ لم يتم رصد رقم صالح.");
+        return;
+      }
+      if (extractedNumber < 0 || extractedNumber > 1_000_000) {
+        alert("⚠️ الرقم خارج النطاق المسموح.");
+        return;
+      }
+
+      await numberToSpeech(extractedNumber);
+    }
+
+    async function numberToSpeech(number) {
+      if (number === 1_000_000) {
+        await playSound("Million.wav");
+      } else {
+        await thousandToSpeech(number);
+      }
+    }
+
+    async function thousandToSpeech(n) {
+      if (n < 1000) {
+        await threeDigitToSpeech(n);
+      } else {
+        const thousands = Math.floor(n / 1000);
+        const remainder = n % 1000;
+
+        if (thousands === 1) {
+          await playSound("Thousand.wav");
+        } else if (thousands === 2) {
+          await playSound("2000.wav");
+        } else if (thousands < 11) {
+          await threeDigitToSpeech(thousands);
+          await playSound("Thousands.wav");
+        } else {
+          await threeDigitToSpeech(thousands);
+          await playSound("Thousand.wav");
+        }
+
+        if (remainder > 0) {
+          await playSound("And.wav");
+          await threeDigitToSpeech(remainder);
+        }
+      }
+    }
+
+    async function threeDigitToSpeech(n) {
+      if (n < 100) {
+        await twoDigitToSpeech(n);
+      } else if (n % 100 === 0) {
+        await playSound(n + ".wav");
+      } else {
+        await playSound(Math.floor(n / 100) * 100 + ".wav");
+        await playSound("And.wav");
+        await twoDigitToSpeech(n % 100);
+      }
+    }
+
+    async function twoDigitToSpeech(n) {
+      if (n < 10) {
+        await playSound(n + ".wav");
+      } else if (n >= 11 && n <= 19) {
+        await playSound(n + ".wav");
+      } else if (n % 10 === 0) {
+        await playSound(n + ".wav");
+      } else {
+        await playSound(n % 10 + ".wav");
+        await playSound("And.wav");
+        await playSound(Math.floor(n / 10) * 10 + ".wav");
+      }
+    }
+
+    function playSound(fileName) {
+      return new Promise((resolve) => {
+        const audio = new Audio(AUDIO_PATH + fileName);
+        audio.onerror = () => {
+          console.warn("❌ ملف ناقص:", fileName);
+          resolve();
+        };
+        audio.onended = resolve;
+        audio.play().catch(() => resolve());
+      });
     }
   </script>
 </body>

@@ -273,36 +273,18 @@
 
     function playSound(fileName) {
       return new Promise((resolve) => {
-        if (currentAudio) {
-          currentAudio.pause();
-          currentAudio.currentTime = 0;
-        }
-    
         const audio = new Audio(AUDIO_PATH + fileName);
-        currentAudio = audio;
-    
         audio.onerror = () => {
           console.warn("❌ ملف ناقص:", fileName);
           resolve();
         };
-    
         audio.onended = () => {
-          currentAudio = null;
-          resolve();
+          setTimeout(resolve, 200); // ⏱️ تأخير 100ms فقط بين الأصوات
         };
-    
         audio.play().catch(() => resolve());
-    
-        // ⏱️ نكمل بعد وقت محدد حتى لو ما خلص الصوت (نقصنا من المدة شوي)
-        setTimeout(() => {
-          if (!audio.paused) {
-            audio.pause();
-            audio.currentTime = 0;
-          }
-          resolve();
-        }, 450); // ← بدل 800 أو مدة الصوت كاملة، نخليها أسرع
       });
     }
+
 
     function stopAudio() {
       if (currentAudio) {

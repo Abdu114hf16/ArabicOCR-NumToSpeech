@@ -312,10 +312,11 @@
           console.warn("❌ ملف ناقص:", fileName);
           resolve();
         };
-        audio.onended = resolve;
+        audio.onended = () => setTimeout(resolve, 25); // تقليل الفترة بعد انتهاء الصوت (100ms فقط)
         audio.play().catch(() => resolve());
       });
     }
+
   </script>
 </body>
 </html>

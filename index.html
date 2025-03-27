@@ -309,7 +309,7 @@
 
         audio.onended = () => {
           currentAudio = null;
-          setTimeout(resolve, 20);
+          setTimeout(resolve, 10);
         };
 
         audio.play().catch(() => resolve());

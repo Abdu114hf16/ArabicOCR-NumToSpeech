@@ -315,7 +315,7 @@
         };
     
         audio.onended = () => {
-          setTimeout(resolve, 500); // تأخير بسيط بعد انتهاء الصوت
+          setTimeout(resolve, 2000); // تأخير بسيط بعد انتهاء الصوت
         };
     
         audio.play().catch(() => resolve());

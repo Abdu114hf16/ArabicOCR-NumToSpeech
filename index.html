@@ -292,35 +292,95 @@
       }
     }
 
-    function preloadAudio(fileName) {
-      const audio = new Audio(AUDIO_PATH + fileName);
-      audio.preload = "auto";
-      audioCache[fileName] = audio;
-    }
-
-    function playSound(fileName) {
+   function playSound(fileName) {
   return new Promise((resolve) => {
     if (currentAudio) {
       currentAudio.pause();
       currentAudio.currentTime = 0;
     }
 
-    const audio = new Audio(AUDIO_PATH + fileName);
+    // Pre-load the audio to reduce latency
+    const audio = new Audio();
+    audio.src = AUDIO_PATH + fileName;
+    audio.preload = "auto";
     currentAudio = audio;
 
-    audio.onerror = () => {
-      console.warn("❌ ملف ناقص:", fileName);
+    // Add timeout to handle devices that don't fire onended properly
+    let timeoutId;
+    
+    const handleEnd = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      currentAudio = null;
+      audio.onended = null;
+      audio.onerror = null;
       resolve();
     };
 
-    audio.onended = () => {
-      currentAudio = null;
-      resolve(); // مباشرة بعد الانتهاء، ننتقل للصوت التالي
+    audio.onerror = () => {
+      console.warn("❌ ملف ناقص:", fileName);
+      handleEnd();
     };
 
-    audio.play().catch(() => resolve());
+    audio.onended = handleEnd;
+
+    // Mobile optimization: Start playing only after fully loaded
+    audio.oncanplaythrough = () => {
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(() => handleEnd());
+      }
+      
+      // Set a max duration timeout based on the audio length
+      const estimatedDuration = 2000; // Default 2 seconds if we can't determine length
+      const duration = isNaN(audio.duration) ? estimatedDuration : (audio.duration * 1000) + 100;
+      timeoutId = setTimeout(handleEnd, duration);
+    };
+
+    // Fallback if oncanplaythrough doesn't trigger
+    setTimeout(() => {
+      if (audio.readyState < 4) { // Not ready yet
+        audio.play().catch(() => handleEnd());
+      }
+    }, 300);
   });
 }
+
+// Add this function to preload all common audio files at startup
+function preloadAllAudio() {
+  const commonFiles = ['And.wav', 'Thousand.wav', 'Thousands.wav', '2000.wav', 'Million.wav'];
+  
+  // Add all single digits
+  for (let i = 0; i <= 9; i++) {
+    commonFiles.push(`${i}.wav`);
+  }
+  
+  // Add common tens and teens
+  for (let i = 10; i <= 90; i += 10) {
+    commonFiles.push(`${i}.wav`);
+  }
+  for (let i = 11; i <= 19; i++) {
+    commonFiles.push(`${i}.wav`);
+  }
+  
+  // Add hundreds
+  for (let i = 100; i <= 900; i += 100) {
+    commonFiles.push(`${i}.wav`);
+  }
+  
+  // Preload all files
+  for (const file of commonFiles) {
+    const audio = new Audio();
+    audio.src = AUDIO_PATH + file;
+    audio.preload = "auto";
+    
+    // Force load
+    audio.load();
+  }
+}
+
+// Call this on page load
+document.addEventListener('DOMContentLoaded', preloadAllAudio);
   </script>
 </body>
 </html>

@@ -292,56 +292,35 @@
       }
     }
 
-    const audioCache = {};
-
     function preloadAudio(fileName) {
       const audio = new Audio(AUDIO_PATH + fileName);
       audio.preload = "auto";
       audioCache[fileName] = audio;
     }
 
-    window.addEventListener("DOMContentLoaded", () => {
-      const audioFiles = [
-        "And.wav", "Thousand.wav", "Thousands.wav", "Million.wav",
-        "2000.wav",
-        "0.wav", "1.wav", "2.wav", "3.wav", "4.wav", "5.wav", "6.wav", "7.wav", "8.wav", "9.wav",
-        "10.wav", "11.wav", "12.wav", "13.wav", "14.wav", "15.wav", "16.wav", "17.wav", "18.wav", "19.wav",
-        "20.wav", "30.wav", "40.wav", "50.wav", "60.wav", "70.wav", "80.wav", "90.wav",
-        "100.wav", "200.wav", "300.wav", "400.wav", "500.wav", "600.wav", "700.wav", "800.wav", "900.wav"
-      ];
-      audioFiles.forEach(preloadAudio);
-    });
-
     function playSound(fileName) {
-      return new Promise((resolve) => {
-        if (currentAudio) {
-          currentAudio.pause();
-          currentAudio.currentTime = 0;
-        }
-
-        const audio = audioCache[fileName];
-        if (!audio) {
-          console.warn("❌ لم يتم تحميل الملف:", fileName);
-          resolve();
-          return;
-        }
-
-        currentAudio = audio;
-        audio.currentTime = 0;
-
-        audio.onerror = () => {
-          console.warn("❌ خطأ في الملف:", fileName);
-          resolve();
-        };
-
-        audio.onended = () => {
-          currentAudio = null;
-          resolve(); // لا يوجد تأخير إضافي
-        };
-
-        audio.play().catch(() => resolve());
-      });
+  return new Promise((resolve) => {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
     }
+
+    const audio = new Audio(AUDIO_PATH + fileName);
+    currentAudio = audio;
+
+    audio.onerror = () => {
+      console.warn("❌ ملف ناقص:", fileName);
+      resolve();
+    };
+
+    audio.onended = () => {
+      currentAudio = null;
+      resolve(); // مباشرة بعد الانتهاء، ننتقل للصوت التالي
+    };
+
+    audio.play().catch(() => resolve());
+  });
+}
   </script>
 </body>
 </html>

@@ -165,8 +165,14 @@
         const text = data.number?.trim() || "";
         const arabic = "٠١٢٣٤٥٦٧٨٩";
         const english = "0123456789";
-        let num = text.match(/[٠-٩0-9]+/g)?.join("") || "";
-        num = num.split("").map(c => arabic.indexOf(c) > -1 ? english[arabic.indexOf(c)] : c).join("");
+        let match = text.match(/-?[٠-٩0-9]+/); // يدعم الأرقام السالبة
+        if (!match) return null;
+        
+        let num = match[0]
+          .split("")
+          .map(c => arabic.indexOf(c) > -1 ? english[arabic.indexOf(c)] : c)
+          .join("");
+
         return num || null;
       } catch (e) {
         console.error("❌", e);

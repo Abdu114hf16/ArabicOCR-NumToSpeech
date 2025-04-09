@@ -144,7 +144,7 @@
       if (!number) number = await extractNumber(originalDataURL);
 
       if (number) {
-        extractedNumber = parseInt(number);
+        extractedNumber = parseInt(number,10);
         resultDiv.innerHTML = `✅ الرقم المستخرج: <strong>${extractedNumber}</strong>`;
         playBtn.style.display = "inline-block";
       } else {
